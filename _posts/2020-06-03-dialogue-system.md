@@ -9,7 +9,14 @@ tags: Unity C#
 
 # Demo of My Dialogue System (Unity 2019.3)
 
-Originally created in 2019.2, but 2019.3 introduced the new SerializeReference attribute which made for easier serialization. I also scrapped my own list layout in favour of Unity's ReorderableList.
+Dialogue System with characers, items, choices, variables, and paths stored using ScriptableObjects with a custom editor.
+
+{% comment %}
+Originally created in 2019.2, but 2019.3 introduced the new SerializeReference attribute which made for easier serialization. Since this also meant events could be edited in the inspector by default, I scrapped my own list layout in favour of Unity's ReorderableList.
+{% endcomment %}
+
+Here is what it looks like in the editor:  
+![Example Image for the Editor](/assets/ExampleImage.png)
 
 Art made in Aseprite.  
 Sounds made in Bfxr.
