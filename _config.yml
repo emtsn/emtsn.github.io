@@ -21,7 +21,7 @@
 title: Projects Blog
 author: emtsn
 description: >- # this means to ignore newlines until "baseurl:"
-  Projects created with Unity (C#).
+  Projects created by me.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "emtsn.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 github_username: emtsn

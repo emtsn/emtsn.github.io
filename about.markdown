@@ -4,4 +4,6 @@ title: About
 permalink: /about/
 ---
 
-Projects made by [me](https://github.com/emtsn) with Unity (C#).
+Projects made by [me](https://github.com/emtsn) using...
+- Unity (C#)
+- Java
