@@ -15,9 +15,9 @@ Features:
 - Saving and loading using Jackson JSON Library
 - Changeable settings
 
-Created for a course in 3 months.
+Created for a course in 3 months (Sept-Nov 2019) with minor updates afterwards.
 
-Sample code (some method implementations omitted):
+Sample code:
 ```java
 public class VisualEditor extends JFrame implements SaveLoadSystem {
     private enum Display {
@@ -34,7 +34,6 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     private static final int WIDTH = 500;
 
     public static LocalDate currentDate = LocalDate.now();
-    public static Color highlightColor = Color.GREEN;
 
     private Display currentDisplay;
     private YearMonth selectedYearMonth;
@@ -48,19 +47,45 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
 
     private Settings currentSettings;
 
-    public VisualEditor(String name);
+    public VisualEditor(String name) {
+        super(name);
+        initializeFields();
+        initializeBaseDisplay();
+        initializeSchedule();
+        initializeMenu();
+        showDisplay(currentDisplay);
+        setVisible(true);
+    }
 
     // MODIFIES: this
     // EFFECTS: initializes the fields
-    private void initializeFields();
+    private void initializeFields() {
+        selectedYearMonth = YearMonth.from(currentDate);
+        selectedDate = currentDate;
+        currentSchedule = new ScheduleContainer();
+        currentDisplay = Display.MonthCalendar;
+        currentHolidays = new ArrayList<>();
+        currentSettings = new Settings();
+        currentSettings.load();
+        holidaysYear = 0;
+    }
 
     // MODIFIES: this
     // EFFECTS: initializes the schedule
-    private void initializeSchedule();
+    private void initializeSchedule() {
+        if (currentSettings.isLoadOnStart()) {
+            load();
+        }
+    }
 
     // MODIFIES: this
     // EFFECTS: initializes the base display of the frame
-    private void initializeBaseDisplay();
+    private void initializeBaseDisplay() {
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setMinimumSize(new Dimension(WIDTH, HEIGHT));
+        centreComponent = new JPanel();
+        setResizable(false);
+    }
 
     // MODIFIES: this
     // EFFECTS: initializes the top menu bar
@@ -74,33 +99,66 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     }
 
     // EFFECTS: returns a LocalDate to set initial date editing for
-    public LocalDate pickingDate();
+    public LocalDate pickingDate() {
+        if (currentDisplay.equals(Display.EventsForDate)) {
+            return selectedDate;
+        } else if (currentDisplay.equals(Display.MonthCalendar)) {
+            return selectedYearMonth.atDay(1);
+        } else {
+            return currentDate;
+        }
+    }
 
     // MODIFIES: this
     // EFFECTS:: adds dateEvent to currentSchedule
-    public void addEvent(DateEvent dateEvent);
+    public void addEvent(DateEvent dateEvent) {
+        currentSchedule.addEvent(dateEvent);
+    }
 
     // MODIFIES: this
     // EFFECTS:: adds repeatEvent to currentSchedule
-    public void addEvent(RepeatEvent repeatEvent);
+    public void addEvent(RepeatEvent repeatEvent) {
+        currentSchedule.addEvent(repeatEvent);
+    }
 
     // MODIFIES: this
     // EFFECTS: removes dateEvent from currentSchedule, show error if failed
-    public void removeEvent(DateEvent dateEvent);
+    public void removeEvent(DateEvent dateEvent) {
+        if (!currentSchedule.removeEvent(dateEvent)) {
+            showError("Failed to remove event.");
+        }
     }
 
     // MODIFIES: this
     // EFFECTS: removes repeatEvent from currentSchedule, show error if failed
-    public void removeEvent(RepeatEvent repeatEvent);
+    public void removeEvent(RepeatEvent repeatEvent) {
+        if (!currentSchedule.removeEvent(repeatEvent)) {
+            showError("Failed to remove event.");
+        }
+    }
 
     // EFFECTS: saves schedule onto saveFile
     @Override
-    public void save();
+    public void save() {
+        try {
+            SaveLoadSystem.saveWithJackson(currentSchedule, SAVE_FILE);
+        } catch (IOException e) {
+            showError("Failed to save schedule.");
+        }
+    }
 
     // MODIFIES: this
     // EFFECTS: loads schedule from saveFile
     @Override
-    public void load();
+    public void load() {
+        try {
+            currentSchedule = SaveLoadSystem.loadWithJackson(SAVE_FILE, ScheduleContainer.class);
+            currentSchedule.sort();
+            fullUpdate();
+        } catch (IOException e) {
+            showError("Failed to load schedule.");
+        }
+    }
 
     // EFFECTS: creates and returns the file section of the menu bar
     private JMenu createFileMenu() {
@@ -142,30 +200,81 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     }
 
     // EFFECTS: creates and returns the help section of the menu bar
-    private JMenu createHelpMenu();
+    private JMenu createHelpMenu() {
+        JMenu helpMenu = new JMenu("Help");
+        JMenuItem showHelpMenuItem = new JMenuItem("Show Help");
+        showHelpMenuItem.addActionListener(e -> showHelp());
+        helpMenu.add(showHelpMenuItem);
+        return helpMenu;
+    }
 
     // MODIFIES: this
     // EFFECTS: updates the display of the editor
-    public void fullUpdate();
+    public void fullUpdate() {
+        showDisplay(currentDisplay);
+    }
 
     // MODIFIES: this
     // EFFECTS: change the centre component in the editor
-    private void changeCentreComponentTo(Component component, Display setDisplay);
+    private void changeCentreComponentTo(Component component, Display setDisplay) {
+        getContentPane().remove(centreComponent);
+        centreComponent = component;
+        currentDisplay = setDisplay;
+        getContentPane().add(component, BorderLayout.CENTER);
+        validate();
+        repaint();
+    }
 
     // MODIFIES: this
     // EFFECTS: shows the corresponding visual display from display
-    public void showDisplay(Display display);
+    public void showDisplay(Display display) {
+        switch (display) {
+            case Settings:
+                showSettings();
+                break;
+            case Help:
+                showHelp();
+                break;
+            default:
+                showViewDisplay(display);
+                break;
+        }
+    }
 
     // MODIFIES: this
     // EFFECTS: shows the corresponding visual display of view displays
-    private void showViewDisplay(Display display);
+    private void showViewDisplay(Display display) {
+        switch (display) {
+            case MonthCalendar:
+                showMonthCalendar();
+                break;
+            case EventsForDate:
+                showEventsForDate(selectedDate);
+                break;
+            case Holidays:
+                showHolidays();
+                break;
+            default:
+                showAllEvents();
+                break;
+        }
+    }
 
     // EFFECTS: returns a JLabel for a title
-    private JLabel createTitleLabel(String text);
+    private JLabel createTitleLabel(String text) {
+        JLabel titleLabel = new JLabel(text, SwingConstants.CENTER);
+        titleLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        titleLabel.setBackground(Color.WHITE);
+        titleLabel.setOpaque(true);
+        return titleLabel;
+    }
 
     // MODIFIES: this
     // EFFECTS: shows the calendar display at the centre of the frame
-    public void showMonthCalendar();
+    public void showMonthCalendar() {
+        changeCentreComponentTo(createCalendarDisplay(), Display.MonthCalendar);
+        currentDisplay = Display.MonthCalendar;
+    }
 
     // EFFECTS: creates a calendar display
     private JPanel createCalendarDisplay() {
@@ -258,15 +367,25 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
 
     // MODIFIES: this
     // EFFECTS: moves between the selected month to be shown
-    private void moveMonths(int count);
+    private void moveMonths(int count) {
+        selectedYearMonth = selectedYearMonth.plusMonths(count);
+        showMonthCalendar();
+    }
 
     // MODIFIES: this
     // EFFECTS: shows a list of events in the current schedule
-    private void showAllEvents();
+    private void showAllEvents() {
+        changeCentreComponentTo(createEventsDisplay(currentSchedule, "All Events", false),
+                Display.AllEvents);
+    }
 
     // MODIFIES: this
     // EFFECTS: shows a list of events in the current schedule for the date
-    private void showEventsForDate(LocalDate date);
+    private void showEventsForDate(LocalDate date) {
+        changeCentreComponentTo(createEventsDisplay(currentSchedule.getScheduleForDate(date),
+                "Events for " + date.format(FormatterPattern.DATE_FORMATTER), true), Display.EventsForDate);
+        selectedDate = date;
+    }
 
     // MODIFIES: this
     // EFFECTS: create a panel with a list of events in the schedule
@@ -314,35 +433,103 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     }
 
     // EFFECTS: creates and returns a title JLabel for the events display
-    private JLabel createEventTitle(String title);
+    private JLabel createEventTitle(String title) {
+        JLabel titleLabel = createTitleLabel(title);
+        titleLabel.setMaximumSize(new Dimension(WIDTH, titleLabel.getPreferredSize().height));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return titleLabel;
+    }
 
     // EFFECTS: shows a window to create a new event
-    private void showEventCreator();
+    private void showEventCreator() {
+        EventCreatorFrame newEventFrame = new EventCreatorFrame(this);
+    }
 
     // EFFECTS: shows a window to edit an event
-    public void showEventEditor(EventPanel eventPanel);
+    public void showEventEditor(EventPanel eventPanel) {
+        EventEditorFrame editEventFrame = new EventEditorFrame(this, eventPanel);
+    }
 
     // EFFECTS: create an array of booleans of length of yearMonth,
     //          where values are true if there is a event, and false if there is no event
-    private boolean[] createHasEventsForYearMonth(YearMonth yearMonth);
+    private boolean[] createHasEventsForYearMonth(YearMonth yearMonth) {
+        boolean[] hasEvents = new boolean[yearMonth.lengthOfMonth()];
+        if (currentSettings.isShowDate()) {
+            setHasEventsForDateEvents(currentSchedule, yearMonth, hasEvents);
+        }
+        if (currentSettings.isShowRepeat()) {
+            setHasEventsForRepeatEvents(currentSchedule, yearMonth, hasEvents);
+        }
+        return hasEvents;
+    }
 
     // MODIFIES: hasEvents
     // EFFECTS: set values of hasEvents (array of booleans) to be true when there is a dateEvent on that dayOfMonth
-    private void setHasEventsForDateEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents);
+    private void setHasEventsForDateEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents) {
+        List<DateEvent> dateEventsForMonth = getDateEventsForYearMonth(schedule, yearMonth);
+        for (DateEvent dateEvent : dateEventsForMonth) {
+            hasEvents[dateEvent.getDate().getDayOfMonth() - 1] = true;
+        }
+    }
 
     // MODIFIES: hasEvents
     // EFFECTS: set values of hasEvents (array of booleans) to be true when there is a repeatEvent on that dayOfMonth
-    private void setHasEventsForRepeatEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents);
+    private void setHasEventsForRepeatEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents) {
+        List<RepeatEvent> repeatEvents = schedule.getRepeatEvents();
+        for (int i = 0; i < yearMonth.lengthOfMonth(); i++) {
+            if (!hasEvents[i]) {
+                for (RepeatEvent r : repeatEvents) {
+                    if (r.isOnDate(yearMonth.atDay(i + 1))) {
+                        hasEvents[i] = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     // EFFECTS: returns a list of all dateEvents in schedule that are in yearMonth
-    private ArrayList<DateEvent> getDateEventsForYearMonth(ScheduleContainer schedule, YearMonth yearMonth);
+    private ArrayList<DateEvent> getDateEventsForYearMonth(ScheduleContainer schedule, YearMonth yearMonth) {
+        List<DateEvent> dateEvents = schedule.getDateEvents();
+        ArrayList<DateEvent> dateEventsForMonth = new ArrayList<>();
+        boolean reached = false;
+        for (DateEvent dateEvent : dateEvents) {
+            if (YearMonth.from(dateEvent.getDate()).equals(yearMonth)) {
+                reached = true;
+                dateEventsForMonth.add(dateEvent);
+            } else if (reached) {
+                break;
+            }
+        }
+        return dateEventsForMonth;
+    }
 
     // MODIFIES: this
     // EFFECTS: shows the holiday display
-    private void showHolidays();
+    private void showHolidays() {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        String holidayText = getAllHolidaysText();
+        JLabel holidayListLabel = new JLabel(holidayText);
+        holidayListLabel.setVerticalAlignment(SwingConstants.TOP);
+        holidayListLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        JScrollPane scrollPane = new JScrollPane(holidayListLabel);
+        mainPanel.add(createTitleLabel("Holidays for " + currentDate.getYear()), BorderLayout.PAGE_START);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        changeCentreComponentTo(mainPanel, Display.Holidays);
+    }
 
     // EFFECTS: returns a formatted text of all of the holidays in current year
-    private String getAllHolidaysText();
+    private String getAllHolidaysText() {
+        String text = "<html>";
+        updateHolidays();
+        for (int i = 0; i < currentHolidays.size(); i++) {
+            text = text.concat(getFormattedHolidayText(currentHolidays.get(i)));
+            if (i < currentHolidays.size() - 1) {
+                text = text.concat("<br>");
+            }
+        }
+        return text;
+    }
 
     // MODIFIES: this
     // EFFECTS: updates the current holidays
@@ -368,27 +555,111 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
 
     // MODIFIES: this
     // EFFECTS: split holidays on the same date
-    private void splitHolidays();
+    private void splitHolidays() {
+        List<MultiEvent> newHolidays = new ArrayList<>();
+        for (MultiEvent holiday : currentHolidays) {
+            newHolidays.add(holiday);
+            newHolidays.addAll(holiday.split());
+        }
+        currentHolidays.clear();
+        currentHolidays = newHolidays;
+    }
 
     // MODIFIES: this
     // EFFECTS: merge current holidays on the same date
-    private void mergeHolidays();
+    private void mergeHolidays() {
+        for (int i = currentHolidays.size() - 1; i > 0; i--) {
+            MultiEvent curr = currentHolidays.get(i);
+            MultiEvent prev = currentHolidays.get(i - 1);
+            if (prev.isOnDate(curr.getDate())) {
+                prev.addLink(curr);
+                currentHolidays.remove(i);
+            }
+        }
+    }
 
     // EFFECTS: returns a list of holidays from JSONArray
-    private List<MultiEvent> getHolidaysFrom(JSONArray array);
+    private List<MultiEvent> getHolidaysFrom(JSONArray array) {
+        List<MultiEvent> retVal = new ArrayList<>();
+        for (int i = 0; i < array.length(); i++) {
+            retVal.add(getHolidayFrom(array.getJSONObject(i)));
+        }
+        return retVal;
+    }
 
     // EFFECTS: returns a DateEvent for holiday from JSONObject
-    private MultiEvent getHolidayFrom(JSONObject object);
+    private MultiEvent getHolidayFrom(JSONObject object) {
+        LocalDate holidate = LocalDate.parse(object.get("date").toString(), DATE_DASH_FORMATTER);
+        return new MultiEvent(object.get("name").toString(), holidate,
+                LocalTime.of(0,0), LocalTime.of(23,59));
+    }
 
     // EFFECTS: returns a formatted text of the holiday
-    private String getFormattedHolidayText(MultiEvent holiday);
+    private String getFormattedHolidayText(MultiEvent holiday) {
+        boolean isBefore = holiday.getDate().isBefore(currentDate);
+        if (isBefore) {
+            return "<font color=#999999>[" + holiday.getTimeString() + "] " + holiday.getMergedName() + "</font>";
+        } else {
+            return "[" + holiday.getTimeString() + "] " + holiday.getMergedName();
+        }
+    }
 
     // MODIFIES: this
     // EFFECTS: shows the setting display
-    private void showSettings();
+    private void showSettings() {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        JPanel listPanel = new JPanel();
+        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.PAGE_AXIS));
+        listPanel.add(createEventSettingPanel(currentSettings));
+        listPanel.add(createLoadSettingsPanel(currentSettings));
+        listPanel.add(createColorSettingPanel(currentSettings));
+        mainPanel.add(createTitleLabel("Settings"), BorderLayout.PAGE_START);
+        mainPanel.add(listPanel, BorderLayout.CENTER);
+        changeCentreComponentTo(mainPanel, Display.Settings);
+    }
+
+    // EFFECTS: creates the panel for load options
+    private JPanel createLoadSettingsPanel(Settings settings) {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS));
+        JCheckBox colorChooser = new JCheckBox("Load on Start");
+        colorChooser.setSelected(settings.isLoadOnStart());
+        colorChooser.addItemListener(e -> settings.setLoadOnStart(e.getStateChange() == ItemEvent.SELECTED));
+        mainPanel.add(colorChooser);
+        return mainPanel;
+    }
+
+    // EFFECTS: creates the panel for color options
+    private JPanel createColorSettingPanel(Settings settings) {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS));
+        JCheckBox colorChooser = new JCheckBox("B&W mode");
+        colorChooser.setSelected(settings.getHighlightColor() == Settings.DEFAULT_HIGHLIGHT_COLORLESS);
+        colorChooser.addItemListener(
+                e -> settings.setHighlightColor((e.getStateChange() == ItemEvent.SELECTED)
+                        ? Settings.DEFAULT_HIGHLIGHT_COLORLESS : Settings.DEFAULT_HIGHLIGHT_COLOR));
+        mainPanel.add(colorChooser);
+        return mainPanel;
+    }
 
     // EFFECTS: creates the panel for event options
-    private JPanel createEventSettingPanel();
+    private JPanel createEventSettingPanel(Settings settings) {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS));
+        JCheckBox showDateBox = new JCheckBox("Show Date Events in Calendar");
+        JCheckBox showRepeatBox = new JCheckBox("Show Repeat Events in Calendar");
+        JCheckBox mergeHolidaysBox = new JCheckBox("Merge holidays on the same day");
+        showDateBox.setSelected(settings.isShowDate());
+        showRepeatBox.setSelected(settings.isShowRepeat());
+        mergeHolidaysBox.setSelected(settings.isMergeHoliday());
+        showDateBox.addItemListener(e -> settings.setShowDate(e.getStateChange() == ItemEvent.SELECTED));
+        showRepeatBox.addItemListener(e -> settings.setShowRepeat(e.getStateChange() == ItemEvent.SELECTED));
+        mergeHolidaysBox.addItemListener(e -> settings.setMergeHoliday(e.getStateChange() == ItemEvent.SELECTED));
+        mainPanel.add(showDateBox);
+        mainPanel.add(showRepeatBox);
+        mainPanel.add(mergeHolidaysBox);
+        return mainPanel;
+    }
 
     // MODIFIES: this
     // EFFECTS: show help display
@@ -412,8 +683,16 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     }
 
     // EFFECTS: shows an error dialogue
-    private void showError(String text);
+    private void showError(String text) {
+        JOptionPane.showMessageDialog(this, text, "Error", JOptionPane.ERROR_MESSAGE);
+    }
 
-    public static void main(String[] args);
+    public static void main(String[] args) {
+        try {
+            new VisualEditor("Schedule Editor");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
 ```
