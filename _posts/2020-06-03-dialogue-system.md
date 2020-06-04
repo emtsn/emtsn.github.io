@@ -7,7 +7,7 @@ categories: projects
 tags: Unity C#
 ---
 
-# Demo of My Dialogue System (Unity 2019.3)
+# Quick Demo of My Dialogue System (Unity 2019.3)
 
 Dialogue System with characers, items, choices, variables, and paths stored using ScriptableObjects with a custom editor.
 
