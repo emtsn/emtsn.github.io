@@ -18,14 +18,15 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Projects Blog
+title: Projects
 author: emtsn
 description: >- # this means to ignore newlines until "baseurl:"
-  Projects created by me.
+  A blog for projects created by me.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "emtsn.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 github_username: emtsn
 permalink: none
+show_descriptions: true
 
 # Build settings
 theme: minima

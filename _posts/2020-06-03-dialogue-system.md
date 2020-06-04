@@ -1,6 +1,7 @@
 ---
 layout: gamepost
 title:  "Dialogue System"
+description: Quick demo of my Dialogue System in Unity.
 date: 2020-06-03
 unity_dir: SODialogue-WebGL
 categories: projects
@@ -18,5 +19,5 @@ Originally created in 2019.2, but 2019.3 introduced the new SerializeReference a
 Here is what it looks like in the editor:  
 ![Example Image for the Editor](/assets/ExampleImage.png)
 
-Art made in Aseprite.  
-Sounds made in Bfxr.
+Art made in [Aseprite](https://github.com/aseprite/aseprite/).  
+Sounds made in [Bfxr](https://github.com/increpare/bfxr).

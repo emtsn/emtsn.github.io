@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "Calendar App"
+description: Calendar App created in Java using Swing.
 date: 2020-05-28
 categories: projects
 tags: Java
@@ -11,8 +12,8 @@ Features:
 - A calendar and list display
 - Single or repeating event options
 - Event creator and editor
-- Holidays from a web API
-- Saving and loading using Jackson JSON Library
+- Holidays from a [web API](https://date.nager.at/API)
+- Saving and loading using [Jackson JSON Library](https://github.com/FasterXML/jackson)
 - Changeable settings
 
 Created for a course in 3 months (Sept-Nov 2019) with minor updates afterwards.
