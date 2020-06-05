@@ -30,9 +30,8 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         Help,
     }
 
-    private static final String SAVE_FILE = "data/scheduleData.json";
-    private static final int HEIGHT = 500;
-    private static final int WIDTH = 500;
+    public static final int HEIGHT = 500;
+    public static final int WIDTH = 500;
 
     public static LocalDate currentDate = LocalDate.now();
 
@@ -50,6 +49,9 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
 
     public VisualEditor(String name) {
         super(name);
+        File file = new File(Settings.DEFAULT_DIRECTORY);
+        file.mkdirs();
+        System.out.println(file.getAbsolutePath());
         initializeFields();
         initializeBaseDisplay();
         initializeSchedule();
@@ -74,7 +76,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     // MODIFIES: this
     // EFFECTS: initializes the schedule
     private void initializeSchedule() {
-        if (currentSettings.isLoadOnStart()) {
+        if (currentSettings.isLoadOnStart() && !currentSettings.getSaveFile().isEmpty()) {
             load();
         }
     }
@@ -97,6 +99,12 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         menuBar.add(createViewMenu());
         menuBar.add(createHelpMenu());
         getContentPane().add(menuBar, BorderLayout.PAGE_START);
+    }
+
+    // MODIFIES: this
+    // EFFECTS: changes the saveFile of the current settings
+    public void setSaveFile(String fileName) {
+        currentSettings.setSaveFile(fileName);
     }
 
     // EFFECTS: returns a LocalDate to set initial date editing for
@@ -142,9 +150,9 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     @Override
     public void save() {
         try {
-            SaveLoadSystem.saveWithJackson(currentSchedule, SAVE_FILE);
+            SaveLoadSystem.saveWithJackson(currentSchedule, currentSettings.getSaveFile());
         } catch (IOException e) {
-            showError("Failed to save schedule.");
+            showError("Failed to save schedule. Please check the save file location in settings.");
         }
     }
 
@@ -153,11 +161,24 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     @Override
     public void load() {
         try {
-            currentSchedule = SaveLoadSystem.loadWithJackson(SAVE_FILE, ScheduleContainer.class);
+            currentSchedule = SaveLoadSystem.loadWithJackson(currentSettings.getSaveFile(), ScheduleContainer.class);
             currentSchedule.sort();
             fullUpdate();
         } catch (IOException e) {
-            showError("Failed to load schedule.");
+            showError("Failed to load schedule. Please check the save file location in settings.");
+        }
+    }
+
+    // MODIFIES: this
+    // EFFECTS: brings up prompt to choose a file location
+    public void openFilePrompt() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new FileNameExtensionFilter("JSON Files", "json"));
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        int option = fileChooser.showDialog(this, "Select");
+        if (option == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            currentSettings.setSaveFile(file.getAbsolutePath());
         }
     }
 
@@ -261,15 +282,6 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         }
     }
 
-    // EFFECTS: returns a JLabel for a title
-    private JLabel createTitleLabel(String text) {
-        JLabel titleLabel = new JLabel(text, SwingConstants.CENTER);
-        titleLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        titleLabel.setBackground(Color.WHITE);
-        titleLabel.setOpaque(true);
-        return titleLabel;
-    }
-
     // MODIFIES: this
     // EFFECTS: shows the calendar display at the centre of the frame
     public void showMonthCalendar() {
@@ -280,8 +292,8 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     // EFFECTS: creates a calendar display
     private JPanel createCalendarDisplay() {
         JPanel mainPanel = new JPanel(new BorderLayout());
-        JLabel titleLabel = createTitleLabel(selectedYearMonth.format(DateTimeFormatter.ofPattern("yyyy MMMM")));
-        mainPanel.add(titleLabel, BorderLayout.PAGE_START);
+        mainPanel.add(new TitleLabel(selectedYearMonth.format(DateTimeFormatter.ofPattern("yyyy MMMM"))),
+                BorderLayout.PAGE_START);
         mainPanel.add(createCalendar(), BorderLayout.CENTER);
         mainPanel.add(createToolPanel(e -> moveMonths(-1), e -> moveMonths(1)), BorderLayout.PAGE_END);
         return mainPanel;
@@ -321,7 +333,8 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         monthPanel.setLayout(new GridLayout(7, 7));
         int dayOffSet = selectedYearMonth.atDay(1).getDayOfWeek().getValue();
         int lastDay = selectedYearMonth.lengthOfMonth();
-        boolean[] hasEventsForDates = createHasEventsForYearMonth(selectedYearMonth);
+        boolean[] hasEventsForDates = currentSchedule.hasEvents(selectedYearMonth,
+                currentSettings.isShowDate(), currentSettings.isShowRepeat());
         for (int i = 0; i < 7; i++) {
             for (int j = 0; j < 7; j++) {
                 int currentIndex = (7 * i + j);
@@ -392,8 +405,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     // EFFECTS: create a panel with a list of events in the schedule
     private JPanel createEventsDisplay(ScheduleContainer schedule, String titleText, boolean isDate) {
         JPanel mainPanel = new JPanel(new BorderLayout());
-        JLabel titleLabel = createTitleLabel(titleText);
-        mainPanel.add(titleLabel, BorderLayout.PAGE_START);
+        mainPanel.add(new TitleLabel(titleText), BorderLayout.PAGE_START);
         if (isDate) {
             mainPanel.add(createToolPanel(e -> showEventsForDate(selectedDate.minusDays(1)),
                     e -> showEventsForDate(selectedDate.plusDays(1))), BorderLayout.PAGE_END);
@@ -414,7 +426,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
     // EFFECTS: adds EventPanels of events in the schedule to listPanel
     private void addEventPanels(ScheduleContainer schedule, JPanel listPanel) {
         if (schedule.getRepeatEventsSize() >= 1) {
-            listPanel.add(createEventTitle("Repeat Events"));
+            listPanel.add(new TitleLabel("Repeat Events"));
         }
         for (RepeatEvent r : schedule.getRepeatEvents()) {
             EventPanel eventPanel = new RepeatEventPanel(this, r);
@@ -423,7 +435,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
             listPanel.add(eventPanel);
         }
         if (schedule.getDateEventsSize() >= 1) {
-            listPanel.add(createEventTitle("Date Events"));
+            listPanel.add(new TitleLabel("Date Events"));
         }
         for (DateEvent d : schedule.getDateEvents()) {
             EventPanel eventPanel = new DateEventPanel(this, d);
@@ -431,14 +443,6 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
             eventPanel.setMaximumSize(new Dimension(WIDTH, eventPanel.getMaximumSize().height));
             listPanel.add(eventPanel);
         }
-    }
-
-    // EFFECTS: creates and returns a title JLabel for the events display
-    private JLabel createEventTitle(String title) {
-        JLabel titleLabel = createTitleLabel(title);
-        titleLabel.setMaximumSize(new Dimension(WIDTH, titleLabel.getPreferredSize().height));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return titleLabel;
     }
 
     // EFFECTS: shows a window to create a new event
@@ -451,96 +455,29 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         EventEditorFrame editEventFrame = new EventEditorFrame(this, eventPanel);
     }
 
-    // EFFECTS: create an array of booleans of length of yearMonth,
-    //          where values are true if there is a event, and false if there is no event
-    private boolean[] createHasEventsForYearMonth(YearMonth yearMonth) {
-        boolean[] hasEvents = new boolean[yearMonth.lengthOfMonth()];
-        if (currentSettings.isShowDate()) {
-            setHasEventsForDateEvents(currentSchedule, yearMonth, hasEvents);
-        }
-        if (currentSettings.isShowRepeat()) {
-            setHasEventsForRepeatEvents(currentSchedule, yearMonth, hasEvents);
-        }
-        return hasEvents;
-    }
-
-    // MODIFIES: hasEvents
-    // EFFECTS: set values of hasEvents (array of booleans) to be true when there is a dateEvent on that dayOfMonth
-    private void setHasEventsForDateEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents) {
-        List<DateEvent> dateEventsForMonth = getDateEventsForYearMonth(schedule, yearMonth);
-        for (DateEvent dateEvent : dateEventsForMonth) {
-            hasEvents[dateEvent.getDate().getDayOfMonth() - 1] = true;
-        }
-    }
-
-    // MODIFIES: hasEvents
-    // EFFECTS: set values of hasEvents (array of booleans) to be true when there is a repeatEvent on that dayOfMonth
-    private void setHasEventsForRepeatEvents(ScheduleContainer schedule, YearMonth yearMonth, boolean[] hasEvents) {
-        List<RepeatEvent> repeatEvents = schedule.getRepeatEvents();
-        for (int i = 0; i < yearMonth.lengthOfMonth(); i++) {
-            if (!hasEvents[i]) {
-                for (RepeatEvent r : repeatEvents) {
-                    if (r.isOnDate(yearMonth.atDay(i + 1))) {
-                        hasEvents[i] = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // EFFECTS: returns a list of all dateEvents in schedule that are in yearMonth
-    private ArrayList<DateEvent> getDateEventsForYearMonth(ScheduleContainer schedule, YearMonth yearMonth) {
-        List<DateEvent> dateEvents = schedule.getDateEvents();
-        ArrayList<DateEvent> dateEventsForMonth = new ArrayList<>();
-        boolean reached = false;
-        for (DateEvent dateEvent : dateEvents) {
-            if (YearMonth.from(dateEvent.getDate()).equals(yearMonth)) {
-                reached = true;
-                dateEventsForMonth.add(dateEvent);
-            } else if (reached) {
-                break;
-            }
-        }
-        return dateEventsForMonth;
-    }
-
     // MODIFIES: this
     // EFFECTS: shows the holiday display
     private void showHolidays() {
         JPanel mainPanel = new JPanel(new BorderLayout());
-        String holidayText = getAllHolidaysText();
+        updateHolidays();
+        String holidayText = HolidayUtility.getFormattedHolidaysText(currentHolidays, currentDate);
         JLabel holidayListLabel = new JLabel(holidayText);
         holidayListLabel.setVerticalAlignment(SwingConstants.TOP);
         holidayListLabel.setHorizontalAlignment(SwingConstants.LEFT);
         JScrollPane scrollPane = new JScrollPane(holidayListLabel);
-        mainPanel.add(createTitleLabel("Holidays for " + currentDate.getYear()), BorderLayout.PAGE_START);
+        mainPanel.add(new TitleLabel("Holidays for " + currentDate.getYear()), BorderLayout.PAGE_START);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         changeCentreComponentTo(mainPanel, Display.Holidays);
-    }
-
-    // EFFECTS: returns a formatted text of all of the holidays in current year
-    private String getAllHolidaysText() {
-        String text = "<html>";
-        updateHolidays();
-        for (int i = 0; i < currentHolidays.size(); i++) {
-            text = text.concat(getFormattedHolidayText(currentHolidays.get(i)));
-            if (i < currentHolidays.size() - 1) {
-                text = text.concat("<br>");
-            }
-        }
-        return text;
     }
 
     // MODIFIES: this
     // EFFECTS: updates the current holidays
     private void updateHolidays() {
         if (currentHolidays.size() < 1 || holidaysYear != currentDate.getYear()) {
-            System.out.println("Fetching holidays...");
             String theURL = "https://date.nager.at/api/v2/PublicHolidays/" + currentDate.getYear() + "/CA";
             try {
                 String webpage = PageReader.readWebPage(theURL);
-                currentHolidays = getHolidaysFrom(new JSONArray(webpage));
+                currentHolidays = HolidayUtility.getHolidaysFrom(new JSONArray(webpage));
                 holidaysYear = currentDate.getYear();
             } catch (IOException | JSONException ie) {
                 ie.printStackTrace();
@@ -548,60 +485,9 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
             }
         }
         if (currentSettings.isMergeHoliday()) {
-            mergeHolidays();
+            MultiEvent.mergeEvents(currentHolidays);
         } else {
-            splitHolidays();
-        }
-    }
-
-    // MODIFIES: this
-    // EFFECTS: split holidays on the same date
-    private void splitHolidays() {
-        List<MultiEvent> newHolidays = new ArrayList<>();
-        for (MultiEvent holiday : currentHolidays) {
-            newHolidays.add(holiday);
-            newHolidays.addAll(holiday.split());
-        }
-        currentHolidays.clear();
-        currentHolidays = newHolidays;
-    }
-
-    // MODIFIES: this
-    // EFFECTS: merge current holidays on the same date
-    private void mergeHolidays() {
-        for (int i = currentHolidays.size() - 1; i > 0; i--) {
-            MultiEvent curr = currentHolidays.get(i);
-            MultiEvent prev = currentHolidays.get(i - 1);
-            if (prev.isOnDate(curr.getDate())) {
-                prev.addLink(curr);
-                currentHolidays.remove(i);
-            }
-        }
-    }
-
-    // EFFECTS: returns a list of holidays from JSONArray
-    private List<MultiEvent> getHolidaysFrom(JSONArray array) {
-        List<MultiEvent> retVal = new ArrayList<>();
-        for (int i = 0; i < array.length(); i++) {
-            retVal.add(getHolidayFrom(array.getJSONObject(i)));
-        }
-        return retVal;
-    }
-
-    // EFFECTS: returns a DateEvent for holiday from JSONObject
-    private MultiEvent getHolidayFrom(JSONObject object) {
-        LocalDate holidate = LocalDate.parse(object.get("date").toString(), DATE_DASH_FORMATTER);
-        return new MultiEvent(object.get("name").toString(), holidate,
-                LocalTime.of(0,0), LocalTime.of(23,59));
-    }
-
-    // EFFECTS: returns a formatted text of the holiday
-    private String getFormattedHolidayText(MultiEvent holiday) {
-        boolean isBefore = holiday.getDate().isBefore(currentDate);
-        if (isBefore) {
-            return "<font color=#999999>[" + holiday.getTimeString() + "] " + holiday.getMergedName() + "</font>";
-        } else {
-            return "[" + holiday.getTimeString() + "] " + holiday.getMergedName();
+            MultiEvent.splitEvents(currentHolidays);
         }
     }
 
@@ -611,22 +497,45 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         JPanel mainPanel = new JPanel(new BorderLayout());
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.PAGE_AXIS));
+        listPanel.add(createLoadSettingPanel(currentSettings));
         listPanel.add(createEventSettingPanel(currentSettings));
-        listPanel.add(createLoadSettingsPanel(currentSettings));
         listPanel.add(createColorSettingPanel(currentSettings));
-        mainPanel.add(createTitleLabel("Settings"), BorderLayout.PAGE_START);
+        mainPanel.add(new TitleLabel("Settings"), BorderLayout.PAGE_START);
         mainPanel.add(listPanel, BorderLayout.CENTER);
         changeCentreComponentTo(mainPanel, Display.Settings);
     }
 
     // EFFECTS: creates the panel for load options
-    private JPanel createLoadSettingsPanel(Settings settings) {
+    private JPanel createLoadSettingPanel(Settings settings) {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS));
         JCheckBox colorChooser = new JCheckBox("Load on Start");
         colorChooser.setSelected(settings.isLoadOnStart());
         colorChooser.addItemListener(e -> settings.setLoadOnStart(e.getStateChange() == ItemEvent.SELECTED));
+        colorChooser.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainPanel.add(createFilePicker(settings));
         mainPanel.add(colorChooser);
+        mainPanel.setMaximumSize(mainPanel.getMinimumSize());
+        mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return mainPanel;
+    }
+
+    // EFFECTS: create the panel for selecting file
+    private JPanel createFilePicker(Settings settings) {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS));
+        JLabel label = new JLabel("  File Location");
+        JTextField fileField = new JTextField(settings.getSaveFile());
+        fileField.setMinimumSize(new Dimension(WIDTH, fileField.getMinimumSize().height));
+        JButton button = new JButton("Select New Location");
+        button.addActionListener(e -> {
+            openFilePrompt();
+            showSettings();
+        });
+        fileField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainPanel.add(label);
+        mainPanel.add(fileField);
+        mainPanel.add(button);
         return mainPanel;
     }
 
@@ -640,6 +549,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
                 e -> settings.setHighlightColor((e.getStateChange() == ItemEvent.SELECTED)
                         ? Settings.DEFAULT_HIGHLIGHT_COLORLESS : Settings.DEFAULT_HIGHLIGHT_COLOR));
         mainPanel.add(colorChooser);
+        mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return mainPanel;
     }
 
@@ -659,6 +569,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         mainPanel.add(showDateBox);
         mainPanel.add(showRepeatBox);
         mainPanel.add(mergeHolidaysBox);
+        mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return mainPanel;
     }
 
@@ -669,6 +580,8 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         String helpText = "<html>- Use <i>File/Save</i> to save the current schedule<br>"
                 + "- Use <i>File/Load</i> to load the saved schedule<br>"
                 + "- Use <i>File/Settings</i> to view settings<br>"
+                + "&nbsp;&nbsp;- Use <i>Select New Location</i> to find a new location for your calendar<br>"
+                + "&nbsp;&nbsp;- The settings file will always be in \"" + Settings.DEFAULT_SETTINGS_FILE + "\"<br>"
                 + "- Use <i>Edit/New Event</i> to create a new event<br>"
                 + "- Use <i>View/Events</i> to view all events<br>"
                 + "- Use <i>View/Calendar</i> to view the calendar<br>"
@@ -678,7 +591,7 @@ public class VisualEditor extends JFrame implements SaveLoadSystem {
         JLabel textLabel = new JLabel(helpText);
         textLabel.setVerticalAlignment(SwingConstants.TOP);
         textLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        mainPanel.add(createTitleLabel("Help"), BorderLayout.PAGE_START);
+        mainPanel.add(new TitleLabel("Help"), BorderLayout.PAGE_START);
         mainPanel.add(textLabel, BorderLayout.CENTER);
         changeCentreComponentTo(mainPanel, Display.Help);
     }
