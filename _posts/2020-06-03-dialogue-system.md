@@ -1,5 +1,5 @@
 ---
-layout: gamepost
+layout: post
 title:  "Dialogue System"
 description: Quick demo of my Dialogue System in Unity.
 date: 2020-06-03
@@ -10,7 +10,7 @@ tags: Unity C#
 
 # Quick Demo of My Dialogue System (Unity 2019.3)
 
-Dialogue System with characers, items, choices, variables, and paths stored using ScriptableObjects with a custom editor.
+Dialogue System with characers, items, variables, choices, and paths stored using ScriptableObjects with a custom editor.
 
 {% comment %}
 Originally created in 2019.2, but 2019.3 introduced the new SerializeReference attribute which made for easier serialization. Since this also meant events could be edited in the inspector by default, I scrapped my own list layout in favour of Unity's ReorderableList.

@@ -10,16 +10,16 @@ layout: default
         {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
         {{ page.date | date: date_format }}
       </time>
-      {%- if page.author -%}
-        • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">{{ page.author }}</span></span>
-      {%- endif -%}</p>
+      {%- if page.tags.size > 0 -%}
+        -&nbsp;{{ page.tags | join: ", " }}
+      {%- endif -%}
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
     {% if page.unity_dir %}
         {% include page__unity.html %}
+        <br>
     {% endif %}
-    <br>
     {{ content }}
   </div>
 
