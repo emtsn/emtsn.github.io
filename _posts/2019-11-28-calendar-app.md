@@ -25,7 +25,7 @@ Updates (May 2020):
 - Added ability to merge holidays on the same day
 - Added holidays to Calendar display
 - Added option to choose save location
-- Added saving to settings between sessions
+- Added ability to save settings between sessions
 
 Updates (June 2020):
 - Improved layout of events
