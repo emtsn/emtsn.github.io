@@ -12,9 +12,7 @@ tags: Unity C#
 
 Dialogue System with characers, items, variables, choices, and paths stored using ScriptableObjects with a custom editor.
 
-{% comment %}
-Originally created in 2019.2, but 2019.3 introduced the new SerializeReference attribute which made for easier serialization. Since this also meant events could be edited in the inspector by default, I scrapped my own list layout in favour of Unity's ReorderableList.
-{% endcomment %}
+Originally created Summer 2019 for Unity 2019.2, but updated to utilize new features that were added with Unity 2019.3.
 
 Here is what a single dialogue block looks like in the editor:  
 ![Example Image for the Editor](/assets/ExampleImage.png)
@@ -25,28 +23,29 @@ Detailed Features:
         - Manual: must click for the next line
         - Auto: will automatically click for the next line
         - Skip: skip through the dialogue quickly
-    - The text log will log the lines that appear in the box
+    - Supports TextMesh Pro (i.e. in-text tags for bold, italics, etc...)
+    - Logs any lines of dialogue that appear
 - Characters
-    - Characters with a set portrait and voice tone (the blips)
-    - Portraits will appear when they speak and dim when they are not speaking
+    - Have a set portrait and voice tone (the blips)
+    - Portraits will appear and focus on speaking characters 
     - Can change portrait positions during dialogue
 - Items
-    - Items can be given and taken from players
+    - Can be given or taken from players
 - Variables
-    - Variables can be global, local, or temporary
+    - Can be global, local, or temporary
         - Global variables will stay forever
-        - Local variables get reset when the dialogue stops
-        - Temporary variables get reset when a dialogue block finishes
-    - Variables can be operated on by or set from values or other variables
+        - Local variables get deleted when the dialogue stops
+        - Temporary variables get deleted when a dialogue block finishes
+    - Can be operated on by or set from values or other variables
     - Can generate random values
 - Choices
-    - Choices have a set dialogue block to go to and a label for the UI
-    - Choices can be hidden or dimmed if checks on variables do not pass
+    - Have a set dialogue block to go to and a custom label
+    - Can be hidden or dimmed if checks on variables do not pass
 - Paths
-    - Paths have a set dialogue block to go to
+    - Have a set dialogue block to go to
     - A path with the variables checks passing will automatically be picked to go to
 - Jumps
-    - A way of creating control flow inside of a dialogue block
+    - Creates control flow inside of a dialogue block
     - The 'finish' line will skip control to the end
 
 Art made in [Aseprite](https://github.com/aseprite/aseprite/).  

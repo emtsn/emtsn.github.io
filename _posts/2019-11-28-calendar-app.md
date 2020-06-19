@@ -6,13 +6,15 @@ date: 2019-11-28
 categories: projects
 tags: Java
 ---
-![Calendar App](/assets/img-calendar-app.png)
+
+<img src="../assets/img-calendar-app.png" alt="Calendar App" width="600" height="600">
 # Calendar App created in Java using Swing
 
 Features:
 - A calendar and list display
 - Single or repeating event options
 - Event creator and editor
+- Search for events in range
 - Holidays from a [web API](https://date.nager.at/API)
 - Saving and loading using [Jackson JSON Library](https://github.com/FasterXML/jackson)
 - Changeable settings
@@ -30,6 +32,6 @@ Updates (May 2020):
 Updates (June 2020):
 - Improved layout of events
 - Improved saving and loading options
+- Improved settings menu and added more settings
 - Updated search algorithm
-- Added today and current week view
 - Added search functionality
