@@ -12,7 +12,7 @@ tags: Unity C#
 
 Dialogue System with characers, items, variables, choices, and paths stored using ScriptableObjects with a custom editor.
 
-Originally created Summer 2019 for Unity 2019.2, but updated to utilize new features that were added with Unity 2019.3.
+Originally created in Summer 2019 for Unity 2019.2, but updated to utilize new features that were added with Unity 2019.3.
 
 Here is what a single dialogue block looks like in the editor:  
 ![Example Image for the Editor](/assets/ExampleImage.png)
@@ -24,6 +24,7 @@ Detailed Features:
         - Auto: will automatically click for the next line
         - Skip: skip through the dialogue quickly
     - Supports TextMesh Pro (i.e. in-text tags for bold, italics, etc...)
+    - Supports in-text variables
     - Logs any lines of dialogue that appear
 - Characters
     - Have a set portrait and voice tone (the blips)
